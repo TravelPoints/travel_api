@@ -1,0 +1,254 @@
+openapi: 3.0.1
+info:
+  title: Tours
+  description: This api provides access to tour objects
+  version: v3
+servers:
+  - url: https://{environment}.travelmania.com:{port}/{basePath}
+    description: Production server
+    variables:
+      environment:
+        default: api
+        description: An api for Travel Mania
+      port:
+        enum:
+          - 80
+          - 443
+        defualt: 80
+      basePath:
+        default: v1
+components:
+  schemas:
+    ID:
+      type: integer
+      required: true
+      maximum: 20
+    SID:
+      type: string
+      required: true
+      maxLength: 128
+    Type:
+      type: string
+      required: true
+      minLength: 1
+      maxLength: 255
+    DataObject:
+      type: object
+      required: true
+    DataArray:
+      type: array
+      required: true
+    RelationshipsDataItem:
+      type: object
+      properties:
+        id: ID
+        type: Type
+    RelationshipsDataItemSID:
+      type: object
+      properties:
+        id: SID
+        type: Type
+    Redis:
+      type: object
+    TourAttributes:
+      description: Tour attributes description
+      type: object
+      properties:
+        duration:
+          required: true
+          type: integer
+          minimum: 3
+          maximum: 10
+          facets:
+            index:
+              idx_duration: index
+        deleted_at:
+          type: datetime
+    Tour:
+      type: object
+      properties:
+        type: Type
+        id: ID
+        attributes: TourAttributes
+        relationships:
+          type: TourGuidesRelationships[]
+        cache:
+          type: Redis
+          properties:
+            stampede_xfetch:
+              type: boolean
+              default: true
+            stampede_beta:
+              type: number
+              default: 1.1
+            ttl:
+              type: integer
+              default: 3600
+    TourRelationships:
+      description: Tour relationship description
+      type: object
+      properties:
+        data:
+          type: DataArray
+          items:
+            type: RelationshipsDataItem
+    TourGuidesAttributes:
+      description: Tour guides attributes description
+      type: object
+      properties:
+        title:
+          required: true
+          type: string
+          minLength: 32
+          maxLength: 256
+        description:
+          required: true
+          type: string
+          minLength: 32
+          maxLength: 4096
+          facets:
+            spell_check: true
+            spell_language: en
+        audio:
+          required: true
+          type: string
+          minLength: 32
+          maxLength: 128
+        tour_id:
+          description: ManyToOne Tour relationship
+          required: true
+          type: integer
+          minimum: 10
+          maximum: 20
+          facets:
+            index:
+              idx_fk_tour_id: foreign
+              references: id
+              on: tour
+        deleted_at:
+          type: datetime
+    TourGuides:
+      type: object
+      properties:
+        type: Type
+        id: ID
+        attributes: TourGuidesAttributes
+        relationships:
+          type: TourRelationships
+        cache:
+          type: Redis
+          properties:
+            stampede_xfetch:
+              type: boolean
+              default: true
+            stampede_beta:
+              type: number
+              default: 1.1
+            ttl:
+              type: integer
+              default: 3600
+    TourGuidesRelationships:
+      description: Tour guides relationship description
+      type: object
+      properties:
+        data:
+          type: DataArray
+          items:
+            type: RelationshipsDataItem
+    QueryParams:
+      type: object
+      properties:
+        page:
+          type: integer
+          required: false
+          description: page number
+        limit:
+          type: integer
+          required: false
+          default: 15
+          example: 15
+          description: elements per page
+        sort:
+          type: string
+          required: false
+          pattern: "asc|desc"
+          default: "desc"
+    UserAttributes:
+      type: object
+      properties:
+        first_name:
+          required: true
+          type: string
+          minLength: 16
+          maxLength: 256
+        last_name:
+          required: false
+          type: string
+          minLength: 16
+          maxLength: 256
+        password:
+          description: user password to refresh JWT (encrypted with password_hash)
+          required: true
+          type: string
+          maxLength: 255
+        jwt:
+          description: Special field to run JWT Auth via requests
+          required: true
+          type: string
+          maxLength: 512
+          default: ' '
+        date_of_birth:
+          type: date-only
+        permissions:
+          type: integer
+          required: false
+          maximum: 20
+          facets:
+            bit_mask:
+              publisher: 1
+              editor: 2
+              manager: 4
+              photo_reporter: 8
+              admin: 16
+    User:
+      type: object
+      properties:
+        type: Type
+        id: ID
+        attributes: UserAttributes
+/tour:
+  get:
+    queryParameters: QueryParams
+    responses:
+      200:
+        body:
+          application/json.vnd+json:
+            type: Tour[]
+  post:
+    body:
+      application/json.vnd+json:
+        type: Tour
+    responses:
+      201:
+        body:
+          application/json.vnd+json:
+            type: Tour
+  /{id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json.vnd+json:
+              type: Tour
+    patch:
+      body:
+        application/json.vnd+json:
+          type: Tour
+      responses:
+        200:
+          body:
+            application/json.vnd+json:
+              type: Tour
+    delete:
+      responses:
+        204:
