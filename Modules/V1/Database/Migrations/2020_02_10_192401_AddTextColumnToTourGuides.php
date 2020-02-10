@@ -15,7 +15,7 @@ class AddTextColumnToTourGuides extends Migration
     public function up()
     {
         Schema::table(self::TABLE, function (Blueprint $table) {
-            $table->text('text');
+            $table->text('text')->after('description');
         });
     }
 
